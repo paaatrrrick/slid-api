@@ -21,7 +21,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 async function main() {
-    let api = new Api(process.env.MONGO_URI);
+    let api = new Api(process.env.MONGO_URI, process.env.JWT_PRIVATE_KEY);
     api.init();
 
 
