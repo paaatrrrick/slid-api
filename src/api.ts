@@ -64,7 +64,7 @@ export class Api {
          * }
          * ```
          */
-        router.post('/api/v1/summary/new', async (req: any, res: any) => {
+        router.post('/api/v1/summary/new', this.isLoggedIn, async (req: any, res: any) => {
             if (req.body == null) {
                 console.log('sending here');
                 res.status(400).send(JSON.stringify('Bad request.'));
@@ -78,7 +78,7 @@ export class Api {
             //create a new summary on user by pushing the summaryObject to the user's summaries array. add an index to the summaryObject
             //create a new summary on the summary collection
             //return the summaryObject
-            this._mongo.users().findById(res.user._id, async (err: any, user: any) => {
+            this._mongo.users().findById(res.userId, async (err: any, user: any) => {
                 console.log(user)
                 if (err) {
                     res.status(500).send(JSON.stringify('Internal server error.'));
@@ -95,13 +95,16 @@ export class Api {
                 )
                 console.log(summary)
                 user.summaries.push(summary);
-                this._mongo.users().update(user, (err: any, user: any) => {
+                this._mongo.users().updateOne(user, (err: any, user: any) => {
                     if (err) {
+                        console.log(err);
                         res.status(500).send(JSON.stringify('Internal server error.'));
                         return;
+                    } else {
+                        res.status(200).send(JSON.stringify(summary));
                     }
                 })
-                res.status(200).send(JSON.stringify(summary));
+
             })
         })
 
@@ -204,9 +207,6 @@ export class Api {
     }
 
     private isLoggedIn = (req: any, res: any, next: any) => {
-        console.log('at is logged in');
-        console.log(req.body);
-        console.log(res);
         let token = req.headers["x-access'cramberry-auth-token"];
 
         //check if token exists or is null in an if statement
