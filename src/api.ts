@@ -13,8 +13,8 @@ import { MongoHandler } from "./mongo.js";
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 const pdf2text = require('pdf-to-text');
-const axios = require('axios');
-const vimeo = require('vimeo-upload-client');
+// const axios = require('axios');
+// const vimeo = require('vimeo-upload-client');
 
 
 async function callingFlask(data: any): Promise<any[]> {
@@ -64,28 +64,32 @@ export class Api {
          * }
          * ```
          */
-        router.post('/api/v1/summary/new', this.isLoggedIn, async (req: any, res: any) => {
+        router.post('/api/v1/summary/new', async (req: any, res: any) => {
             if (req.body == null) {
                 console.log('sending here');
                 res.status(400).send(JSON.stringify('Bad request.'));
             }
-            console.log('hit summary');
-            const { title, files } = req.body;
-            console.log(req.body);
+
+            console.log("Body: ", req.body);
+
+            const { title, userId, files } = req.body;
+
             //@ts-ignore
             // const summaries: any[] = await callingFlask(files);
-            const summaries = [{ raw: "butterfly", raw: 'pdf', page: 2, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 3, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterflyv", raw: 'video', start: 5, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/video/upload/v1677407694/cramberry/yjtq56cqf9gharq60lfi.mov" }]
+            const summaries = [{ raw: "butterfly", type: 'pdf', page: 2, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 3, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterflyv", raw: 'video', start: 5, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/video/upload/v1677407694/cramberry/yjtq56cqf9gharq60lfi.mov" }]
             //create a new summary on user by pushing the summaryObject to the user's summaries array. add an index to the summaryObject
             //create a new summary on the summary collection
             //return the summaryObject
-            this._mongo.users().findById(res.userId, async (err: any, user: any) => {
-                console.log(user)
+            console.log(res.userId)
+            this._mongo.users().findById(userId, async (err: any, user: any) => {
+                console.log("User: ", user);
+
                 if (err) {
                     res.status(500).send(JSON.stringify('Internal server error.'));
                     return;
                 }
 
-                console.log('this point')
+
                 let summary = await this._mongo.summaries().create(
                     <Summary>{
                         title: title,
@@ -93,18 +97,8 @@ export class Api {
                         id: this.randomStringToHash24Bits(title),
                     }
                 )
-                console.log(summary)
-                user.summaries.push(summary);
-                this._mongo.users().updateOne(user, (err: any, user: any) => {
-                    if (err) {
-                        console.log(err);
-                        res.status(500).send(JSON.stringify('Internal server error.'));
-                        return;
-                    } else {
-                        res.status(200).send(JSON.stringify(summary));
-                    }
-                })
 
+                res.status(200).send(JSON.stringify(summary.id));
             })
         })
 
@@ -118,7 +112,7 @@ export class Api {
          * }
          * ```
          */
-        router.get('/api/v1/summary/:id', this.isLoggedIn, (req, res) => {
+        router.get('/api/v1/summary/:id', (req, res) => {
             if (req.params.id === null) {
                 res.status(400).send(JSON.stringify('Bad request.'));
             }
@@ -152,7 +146,7 @@ export class Api {
                 res.status(400).send(JSON.stringify('Bad request.'));
             } else {
                 let { idToken, email } = req.body;
-                const uid = this.randomStringToHash24Bits(idToken);
+                const uid = this.randomStringToHash24Bits(<string>idToken);
                 console.log(uid);
                 let user = this._mongo.users().findById(uid, async (err: any, user: any) => {
                     if (err) {
@@ -173,6 +167,7 @@ export class Api {
                                     return;
                                 }
                             })
+
                         let token = jwt.sign({ _id: uid, }, <string>this._jwtPk, { expiresIn: "1000d" });
                         res.status(200).send({ token: token, message: 'Login successful' });
                     } else {
