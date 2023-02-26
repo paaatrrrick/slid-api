@@ -19,13 +19,17 @@ import { MongoClient, Collection, Db } from 'mongodb';
 
 
 async function callingFlask(data: any): Promise<any[]> {
+    console.log('calling flask with')
+    console.log(data);
     const flaskApi = 'http://127.0.0.1:5000';
-    const url = '/api/v1/machinelearning';
+    const url = 'api/v1/machinelearning';
     const response = await fetch(`${flaskApi}/${url}`, {
         method: "POST",
-        body: data
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({'good': data})
     })
     const res = await response.json();
+    console.log(res);
     return res;
 }
 
@@ -85,6 +89,8 @@ export class Api {
          * }
          * ```
          */
+
+
         router.post('/api/v1/summary/new', async (req: any, res: any) => {
             if (req.body == null) {
                 console.log('sending here');
@@ -94,33 +100,23 @@ export class Api {
             console.log("Body: ", req.body);
 
             const { title, userId, files } = req.body;
+            console.log(files)
 
             //@ts-ignore
-            // const summaries: any[] = await callingFlask(files);
-            const summaries = [{ raw: "butterfly", type: 'pdf', page: 2, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 3, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterflyv", raw: 'video', start: 5, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/video/upload/v1677407694/cramberry/yjtq56cqf9gharq60lfi.mov" }]
+            const summaries: any[] = await callingFlask(files);
+            // const summaries = [{ raw: "butterfly", type: 'pdf', page: 2, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 3, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterfly", raw: 'pdf', page: 1, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/image/upload/v1677408827/cramberry/muofg1xcckrqweherqhh.pdf" }, { raw: "butterflyv", raw: 'video', start: 5, id: '1234', url: "https://res.cloudinary.com/dlk3ezbal/video/upload/v1677407694/cramberry/yjtq56cqf9gharq60lfi.mov" }]
             //create a new summary on user by pushing the summaryObject to the user's summaries array. add an index to the summaryObject
             //create a new summary on the summary collection
             //return the summaryObject
-            console.log(res.userId)
-            this._mongo.users().findById(userId, async (err: any, user: any) => {
-                console.log("User: ", user);
-
-                if (err) {
-                    res.status(500).send(JSON.stringify('Internal server error.'));
-                    return;
+            let summary = await this._mongo.summaries().create(
+                <Summary>{
+                    title: title,
+                    summaries: summaries,
+                    id: this.randomStringToHash24Bits(title),
                 }
+            )
 
-
-                let summary = await this._mongo.summaries().create(
-                    <Summary>{
-                        title: title,
-                        summaries: summaries,
-                        id: this.randomStringToHash24Bits(title),
-                    }
-                )
-
-                res.status(200).send(JSON.stringify(summary.id));
-            })
+            res.status(200).send(JSON.stringify(summary.id));
         })
 
 
