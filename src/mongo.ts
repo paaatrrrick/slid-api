@@ -1,6 +1,8 @@
 // import { MongoClient, Collection, Db } from 'mongodb';
 import mongoose, { Schema } from 'mongoose';
 import { User, Summary } from './models.js'
+
+import { MongoClient } from 'mongodb';
 const MONGO_URI = "";
 
 export class MongoHandler {
@@ -31,6 +33,15 @@ export class MongoHandler {
      */
     private _summaryModel: any;
 
+    /**
+     * The summary model for interacting with the summaries in the mongo database
+     * 
+     * @type any
+     * @private
+     * @memberof MongoHandler
+     */
+    private _client: any;
+
     constructor(uri: string | undefined) {
         if (uri === undefined) {
             throw new Error("MongoDB URI is not set");
@@ -44,8 +55,9 @@ export class MongoHandler {
      */
     async init() {
         mongoose.set('strictQuery', false);
-        await mongoose.connect(<string>this._uri);
-
+        mongoose.connect(<string>this._uri);
+        this._client = new MongoClient(<string>this._uri);
+        
         let userSchema = new Schema<User>({
             username: String,
             password: String,
@@ -69,4 +81,10 @@ export class MongoHandler {
     summaries() {
         return this._summaryModel;
     }
+    
+    client()
+    {
+        return this._client;
+    }
 }
+
