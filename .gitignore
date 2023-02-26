@@ -1,4 +1,8 @@
-/target/*
+/target/debug/
+
+/target/release/node_modules/
+/target/release/uploads/
+/target/release/test/
 
 node_modules
 .env
