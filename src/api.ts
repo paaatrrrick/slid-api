@@ -148,7 +148,7 @@ export class Api {
                         console.log('we are at pdf');
                         // console.log("get pdf")
                         // make tmp directory
-                        const pdfParser = new PDFParser(this,1);
+                        var pdfParser = new PDFParser(this,1);
                         // console.log(os.tmpdir+file.originalname);
                         // fs.writeFile(os.tmpdir()+file.originalname, file, (err) => {
                         //     if (err)
@@ -161,13 +161,39 @@ export class Api {
                         //   });
                         // fs.writeFile(os.tmpdir()+file.originalname, file);
                         // console.log(upload+file.filename);
+                        let text;
+                        // pdfParser.loadPDF(file.path);
+                        // console.log("a;sldkfj");
+
                         
-                        pdfParser.loadPDF(file.path);
+
+                        // pdfParser.on("pdfParser_dataError", (errData:any) =>
+                        //     console.error(errData.parserError)
+                        // );
+                        // pdfParser.on("pdfParser_dataReady", (pdfData:any) => {
+                        //     console.log('ready')
+                        //     fs.writeFile(
+                        //     "/Desktop/parsed.json",
+                        //     JSON.stringify(pdfData),
+                        //     function (err, result) {
+                        //         console.log(err);
+                        //     }
+                        //     );
+                        // });
+
+                        // pdfParser.loadPDF(file.path, (e:any) => {console.log('error: ', +e)});
+
+                        // pdfParser.loadPDF("/Desktop/nodejs-pdf-parse/pdf/Paycheck-Protection.pdf");
+
+                        // pdfParser.loadPDF(file.path, (e:any) => {console.log('error: ', +e)});
                         
-                        pdfParser.on("pdfParser_dataError", (errData:any) => console.error(errData.parserError)); 
-                        let text = pdfParser.getRawTextContent().replace(/-/g,"");
-                             
-                        console.log("TEST:"+text);
+                        // pdfParser.on("pdfParser_dataError", (errData:any) => console.error(errData.parserError)); 
+                        // pdfParser.on("pdfParser_dataError", (pdfData:any) => 
+                        // {  
+                        //     // console.log(pdfData);
+                        //     text = pdfParser.getRawTextContent().replace(/-/g,"");
+                        //     console.log("TEST:"+text);
+                        // });
                         // parse "local" pdf
                         // make llm request
                         // save to db
