@@ -10,6 +10,7 @@ import pdf from 'pdf-parse';
 import jwt from 'jsonwebtoken';
 import { Summary, User } from './models.js';
 import { MongoHandler } from "./mongo.js";
+import cors from 'cors';
 
 let upload = multer({ dest: 'uploads/' })
 
@@ -47,136 +48,148 @@ export class Api {
          * }
          * ```
          */
-        router.post('/api/v1/summary/new', this.isLoggedIn, upload.array('files'), (req: any, res: any) => {
+        router.post('/api/v1/summary/new', this.isLoggedIn, upload.array('file'), (req: any, res: any) => {
             if (req.body == null) {
+                console.log('sending here');
                 res.status(400).send(JSON.stringify('Bad request.'));
             }
 
+            const endIndSuffixs = ["mov", "mp4", "pdf", "MOV", "MP4", "PDF"];
+
+
+            console.log('req.body', req.body);
+            console.log()
+            console.log('req.files', req.files);
+            console.log('req.files.length', req.files.length);
+            console.log('req.files[0]', req.files[0]);
             for (let file of req.files) {
-                switch (file.mimetype) {
-                    case "mov":
-                        // make llm request
-                        // save to db
-                        this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                            if (err) {
-                                res.status(500).send(JSON.stringify('Internal server error.'));
-                            }
-
-                            if (user === null) {
-                                res.status(404).send(JSON.stringify('User not found.'));
-                            }
-
-                            let summary = this._mongo.summaries().create(
-                                {
-                                    rawContent: file,
-                                    summedContent: [],
-                                    type: "video"
-                                }
-                            )
-
-                            user.summaries.push(summary);
-
-                            user.save((err: any) => {
+                console.log(file);
+                console.log(file.mimetype);
+                let fileExt: string = file.name.split('.').pop();
+                if (endIndSuffixs.includes(fileExt)) {
+                    if (fileExt === "PDF") {
+                        fileExt = "pdf";
+                    } else if (fileExt === "MOV") {
+                        fileExt = "mov";
+                    } else if (fileExt === "MP4") {
+                        fileExt = "mp4";
+                    }
+                    switch (fileExt) {
+                        case "mov":
+                            console.log('bottom');
+                            // make llm request
+                            // save to db
+                            this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
                                 if (err) {
                                     res.status(500).send(JSON.stringify('Internal server error.'));
+                                    return
                                 }
-                            })
 
-                            res.status(200).send(JSON.stringify('Success.'));
-                        })
-                        break;
-
-                    case "mp4":
-                        /** @todo make llm request */
-
-                        this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                            if (err) {
-                                res.status(500).send(JSON.stringify('Internal server error.'));
-                            }
-
-                            if (user === null) {
-                                res.status(404).send(JSON.stringify('User not found.'));
-                            }
-
-                            let summary = this._mongo.summaries().create(
-                                {
-                                    rawContent: "transcript",
-                                    summedContent: [],
-                                    type: "text"
+                                if (user === null) {
+                                    res.status(404).send(JSON.stringify('User not found.'));
+                                    return
                                 }
-                            )
 
-                            user.summaries.push(summary);
+                                let summary = this._mongo.summaries().create(
+                                    {
+                                        rawContent: file,
+                                        summedContent: [],
+                                        type: "video"
+                                    }
+                                )
 
-                            user.save((err: any) => {
-                                if (err) {
-                                    res.status(500).send(JSON.stringify('Internal server error.'));
-                                }
-                            })
+                                user.summaries.push(summary);
 
-                            res.status(200).send(JSON.stringify('Success.'));
-                        })
-                        break;
-
-                    case "pdf":
-                        // make tmp directory
-                        // parse "local" pdf
-                        // make llm request
-                        // save to db
-                        res.status(501).send(JSON.stringify('Not implemented.'));
-                        break;
-
-                    case "jpg":
-                        // make llm request
-                        // save to db
-                        res.status(501).send(JSON.stringify('Not implemented.'));
-                        break;
-
-                    case "png":
-                        // make llm request
-                        // save to db
-                        res.status(501).send(JSON.stringify('Not implemented.'));
-                        break;
-
-                    case "text/plain":
-                        console.log(file)
-
-                        this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                            if (err) {
-                                res.status(500).send(JSON.stringify('Internal server error.'));
-                            }
-
-                            if (user === null) {
-                                res.status(404).send(JSON.stringify('User not found.'));
-                            }
-
-                            /** @todo make llm request */
-
-                            let summary = this._mongo.summaries()?.create(
-                                <Summary>{
-                                    rawContent: [file],
-                                    summedContent: [],
-                                    type: req.body.type
-                                }, (err: any, summary: any) => {
+                                user.save((err: any) => {
                                     if (err) {
                                         res.status(500).send(JSON.stringify('Internal server error.'));
+                                        return
                                     }
+                                })
+                            })
+                            break;
 
-                                    user.summaries.push(summary._id)
+                        case "mp4":
+                            /** @todo make llm request */
 
-                                    user.save()
+                            this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
+                                if (err) {
+                                    res.status(500).send(JSON.stringify('Internal server error.'));
+                                    return
                                 }
-                            )
-                        })
 
-                        res.status(200).send(JSON.stringify('Success.'));
-                        break;
+                                if (user === null) {
+                                    res.status(404).send(JSON.stringify('User not found.'));
+                                    return
+                                }
 
-                    default:
-                        res.status(400).send(JSON.stringify('Bad request.')); ``
+                                let summary = this._mongo.summaries().create(
+                                    {
+                                        rawContent: "transcript",
+                                        summedContent: [],
+                                        type: "text"
+                                    }
+                                )
+
+                                user.summaries.push(summary);
+
+                                user.save((err: any) => {
+                                    if (err) {
+                                        res.status(500).send(JSON.stringify('Internal server error.'));
+                                        return
+                                    }
+                                })
+
+                            })
+                            break;
+
+                        case "pdf":
+                            // make tmp directory
+                            // parse "local" pdf
+                            // make llm request
+                            // save to db
+                            res.status(501).send(JSON.stringify('Not implemented.'));
+                            break;
+
+                        case "text/plain":
+                            console.log(file)
+
+                            this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
+                                if (err) {
+                                    res.status(500).send(JSON.stringify('Internal server error.'));
+                                    return
+                                }
+
+                                if (user === null) {
+                                    res.status(404).send(JSON.stringify('User not found.'));
+                                    return
+                                }
+
+                                /** @todo make llm request */
+
+                                let summary = this._mongo.summaries()?.create(
+                                    <Summary>{
+                                        rawContent: [file],
+                                        summedContent: [],
+                                        type: req.body.type
+                                    }, (err: any, summary: any) => {
+                                        if (err) {
+                                            res.status(500).send(JSON.stringify('Internal server error.'));
+                                        }
+
+                                        user.summaries.push(summary._id)
+
+                                        user.save()
+                                    }
+                                )
+                            })
+                            break;
+
+                        default:
+                            res.status(400).send(JSON.stringify('Bad request.')); ``
+                    }
                 }
-            }
-        })
+            })
 
         /**
          * Route for fething a summary
@@ -216,43 +229,47 @@ export class Api {
          * }
          * ```
          */
-        router.get('/api/v1/users/login', (req, res) => {
+        router.post('/api/v1/users/login', (req, res) => {
+            console.log('we have bee hit');
             if (req.body === null) {
                 res.status(400).send(JSON.stringify('Bad request.'));
             } else {
+                console.log('we have bee hit 2');
                 let { idToken, email } = req.body;
-                let uid = this.randomStringToHash24Bits("idToken");
-
-                let user = this._mongo.users().findById(uid, (err: any, user: any) => {
+                console.log(idToken, email);
+                const uid = this.randomStringToHash24Bits(idToken);
+                console.log(uid);
+                let user = this._mongo.users().findById(uid, async (err: any, user: any) => {
                     if (err) {
                         res.status(500).send(JSON.stringify('Internal server error.'));
 
                         return;
                     }
-
+                    console.log('we have bee hit 3');
+                    console.log(user);
                     if (!user) {
-                        this._mongo.users().create(
+                        const user = await this._mongo.users().create(
                             <User>{
+                                _id: uid,
                                 username: email,
-                                password: idToken,
                                 summaries: []
                             }, (err: any, user: any) => {
                                 if (err) {
+                                    console.log(err);
                                     res.status(500).send(JSON.stringify('Internal server error.'));
-
                                     return;
                                 }
                             })
-
+                        console.log(user);
+                        console.log('we have bee hit 4');
                         let token = jwt.sign({ _id: uid, }, <string>this._jwtPk, { expiresIn: "1000d" });
-                        res.status(201).send(JSON.stringify('User created.' + 'Token:  + token'));
-
-                        return;
+                        res.status(200).send({ token: token, message: 'Login successful' });
+                    } else {
+                        console.log('we have bee hit 5');
+                        let token = jwt.sign({ _id: uid, }, <string>this._jwtPk, { expiresIn: "1000d" });
+                        res.status(200).send({ token: token, message: 'Login successful' });
                     }
                 })
-
-                let token = jwt.sign({ _id: uid, }, <string>this._jwtPk, { expiresIn: "1000d" });
-                res.status(200).send(JSON.stringify('User found.'));
             }
         })
 
@@ -317,11 +334,11 @@ export class Api {
      */
     start() {
         let app = express();
+        app.use(cors());
         app.use(bodyParser.json())
         app.use(bodyParser.urlencoded({ extended: true }))
 
         app.use(this.init());
-
         app.listen(3000, () => {
             console.log('✅ API listening on port 3000!');
         })

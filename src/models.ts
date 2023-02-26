@@ -30,7 +30,7 @@ export interface User {
      * @type {string}
      * @memberof User
      */
-    password: string,
+    _id: string,
 
     /**
      * Array of summarization id's

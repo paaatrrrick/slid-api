@@ -48,7 +48,7 @@ export class MongoHandler {
 
         let userSchema = new Schema<User>({
             username: String,
-            password: String,
+            _id: String,
             summaries: []
         })
 
