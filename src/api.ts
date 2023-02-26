@@ -12,7 +12,24 @@ import { Summary, User } from './models.js';
 import { MongoHandler } from "./mongo.js";
 import cors from 'cors';
 
+
+var PDFParser = require("pdf2json");
+
+
 let upload = multer({ dest: 'uploads/' })
+
+async function callingFlask(data:any): Promise<string> {
+    console.log('at calling flask');
+    const flaskApi = 'http://127.0.0.1:5000';
+    const url = '/api/v1/machinelearning';
+    const response = await fetch(`${flaskApi}/${url}`, {
+        method: "POST",
+        body: data
+    })
+    const res = await response.json();
+    return res;
+
+}
 
 export class Api {
     private _mongo: MongoHandler;
@@ -25,6 +42,7 @@ export class Api {
         this._mongo.init();
     }
 
+    
     /**
      *  Initializes the API routes
      * @returns {express.Router} The router for the api
@@ -48,7 +66,7 @@ export class Api {
          * }
          * ```
          */
-        router.post('/api/v1/summary/new', this.isLoggedIn, upload.array('file'), (req: any, res: any) => {
+        router.post('/api/v1/summary/new', this.isLoggedIn, upload.array('file'), async (req: any, res: any) => {
             if (req.body == null) {
                 console.log('sending here');
                 res.status(400).send(JSON.stringify('Bad request.'));
@@ -62,10 +80,14 @@ export class Api {
             console.log('req.files', req.files);
             console.log('req.files.length', req.files.length);
             console.log('req.files[0]', req.files[0]);
+            let resp: string;
+            let result: string;
+           
+            
             for (let file of req.files) {
+                let counter  = 0;
                 console.log(file);
-                console.log(file.mimetype);
-                let fileExt: string = file.name.split('.').pop();
+                let fileExt = file.originalname.split('.').pop();
                 if (endIndSuffixs.includes(fileExt)) {
                     if (fileExt === "PDF") {
                         fileExt = "pdf";
@@ -74,122 +96,127 @@ export class Api {
                     } else if (fileExt === "MP4") {
                         fileExt = "mp4";
                     }
-                    switch (fileExt) {
-                        case "mov":
-                            console.log('bottom');
-                            // make llm request
-                            // save to db
-                            this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                                if (err) {
-                                    res.status(500).send(JSON.stringify('Internal server error.'));
-                                    return
-                                }
-
-                                if (user === null) {
-                                    res.status(404).send(JSON.stringify('User not found.'));
-                                    return
-                                }
-
-                                let summary = this._mongo.summaries().create(
-                                    {
-                                        rawContent: file,
-                                        summedContent: [],
-                                        type: "video"
-                                    }
-                                )
-
-                                user.summaries.push(summary);
-
-                                user.save((err: any) => {
-                                    if (err) {
-                                        res.status(500).send(JSON.stringify('Internal server error.'));
-                                        return
-                                    }
-                                })
-                            })
-                            break;
-
-                        case "mp4":
-                            /** @todo make llm request */
-
-                            this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                                if (err) {
-                                    res.status(500).send(JSON.stringify('Internal server error.'));
-                                    return
-                                }
-
-                                if (user === null) {
-                                    res.status(404).send(JSON.stringify('User not found.'));
-                                    return
-                                }
-
-                                let summary = this._mongo.summaries().create(
-                                    {
-                                        rawContent: "transcript",
-                                        summedContent: [],
-                                        type: "text"
-                                    }
-                                )
-
-                                user.summaries.push(summary);
-
-                                user.save((err: any) => {
-                                    if (err) {
-                                        res.status(500).send(JSON.stringify('Internal server error.'));
-                                        return
-                                    }
-                                })
-
-                            })
-                            break;
-
-                        case "pdf":
-                            // make tmp directory
-                            // parse "local" pdf
-                            // make llm request
-                            // save to db
-                            res.status(501).send(JSON.stringify('Not implemented.'));
-                            break;
-
-                        case "text/plain":
-                            console.log(file)
-
-                            this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                                if (err) {
-                                    res.status(500).send(JSON.stringify('Internal server error.'));
-                                    return
-                                }
-
-                                if (user === null) {
-                                    res.status(404).send(JSON.stringify('User not found.'));
-                                    return
-                                }
-
-                                /** @todo make llm request */
-
-                                let summary = this._mongo.summaries()?.create(
-                                    <Summary>{
-                                        rawContent: [file],
-                                        summedContent: [],
-                                        type: req.body.type
-                                    }, (err: any, summary: any) => {
-                                        if (err) {
-                                            res.status(500).send(JSON.stringify('Internal server error.'));
-                                        }
-
-                                        user.summaries.push(summary._id)
-
-                                        user.save()
-                                    }
-                                )
-                            })
-                            break;
-
-                        default:
-                            res.status(400).send(JSON.stringify('Bad request.')); ``
-                    }
                 }
-            })
+                console.log(fileExt);
+                switch (fileExt) {
+                    case "mp4" || "mov":
+                        /** @todo make llm request */
+                        // let sourceVideoFile = fs.open(file.path,'r',function(err, data){
+                        // });
+                        console.log('we are here in video land');
+
+                        let video = fs.createReadStream(file.path);
+                        // const write = fs.createWriteStream('test.mp4');
+                        fs.readFile(file.path, 'binary', function(err, data){
+      
+                            // Display the file content
+                            result = data;
+                        });
+                        // console.log(os.tmpdir());
+                        console.log(video);
+                        let objmp4 = {"content":video,"type":"mp4","oid":counter++}; 
+                        // var obj = {"content":data,"type":"pdf","oid":counter++};
+                        console.log(objmp4)
+                        resp = await callingFlask(objmp4);
+                        // this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
+                        //     if (err) {
+                        //         res.status(500).send(JSON.stringify('Internal server error.'));
+                        //     }
+                        //     let summary = this._mongo.summaries()?.create(
+                        //         <Summary>{
+                        //             rawContent: result,
+                        //             summedContent: [resp],
+                        //             type: "mp4"
+                        //         }, (err: any, summary: any) => {
+                        //             if (err) {
+                        //                 res.status(500).send(JSON.stringify('Internal server error.'));
+                        //             }
+
+                        //             user.summaries.push(summary._id)
+
+                        //             user.save()
+                        //         }
+                        //     )
+                        // })
+
+                        res.status(200).send(JSON.stringify('Success.'));
+                        // break;
+                        // res.status(501).send(JSON.stringify('Not implemented.'));
+                        break;
+
+                    case "pdf":
+                        console.log('we are at pdf');
+                        // console.log("get pdf")
+                        // make tmp directory
+                        const pdfParser = new PDFParser(this,1);
+                        // console.log(os.tmpdir+file.originalname);
+                        // fs.writeFile(os.tmpdir()+file.originalname, file, (err) => {
+                        //     if (err)
+                        //       console.log(err);
+                        //     else {
+                        //       console.log("File written successfully\n");
+                        //       console.log("The written has the following contents:");
+                        //       console.log(fs.readFileSync("books.txt", "utf8"));
+                        //     }
+                        //   });
+                        // fs.writeFile(os.tmpdir()+file.originalname, file);
+                        // console.log(upload+file.filename);
+                        
+                        pdfParser.loadPDF(file.path);
+                        
+                        pdfParser.on("pdfParser_dataError", (errData:any) => console.error(errData.parserError)); 
+                        let text = pdfParser.getRawTextContent().replace(/-/g,"");
+                             
+                        console.log("TEST:"+text);
+                        // parse "local" pdf
+                        // make llm request
+                        // save to db
+                        // fs.readFile(file.path, 'binary', function(err, data){
+      
+                        //     // Display the file content
+                        //     result = data;
+                        //     // console.log(data);s
+                        // });
+                        var obj = {"content":text,"type":"pdf","oid":counter++};
+                        console.log(obj)
+                        // console.log(os.tmpdir());
+                         resp = await callingFlask(obj);
+
+                        // this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
+                        //     if (err) {
+                        //         res.status(500).send(JSON.stringify('Internal server error.'));
+                        //     }
+                        //     let summary = this._mongo.summaries()?.create(
+                        //         <Summary>{
+                        //             rawContent: result,
+                        //             summedContent: [resp],
+                        //             type: "pdf"
+                        //         }, (err: any, summary: any) => {
+                        //             if (err) {
+                        //                 res.status(500).send(JSON.stringify('Internal server error.'));
+                        //             }
+
+                        //             user.summaries.push(summary._id)
+
+                        //             user.save()
+                        //         }
+                        //     )
+                        // })
+
+                        // res.status(200).send(JSON.stringify('Success.'));
+                        // break;
+                        res.status(200).send(JSON.stringify('Success.'));
+                        // break;
+                        // res.status(501).send(JSON.stringify('Not implemented.'));
+                        break;
+
+                    default:
+                        console.log('nothing');
+                        res.status(400).send(JSON.stringify('Bad request.')); ``
+                }
+            }
+        })
+            
 
         /**
          * Route for fething a summary

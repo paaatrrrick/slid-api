@@ -2,7 +2,7 @@ export interface Summary {
     /**
      * The content to be summarized
      */
-    rawContent: string[],
+    rawContent: string,
 
     /**
      * The summarized content
