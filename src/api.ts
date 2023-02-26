@@ -138,25 +138,16 @@ export class Api {
                 res.status(400).send(JSON.stringify('Bad request.'));
             }
 
-            // let summary = this._mongo.summaries().findById(req.params.id, (err: any, summary: any) => {
-            //     if (err) {
-            //         res.status(500).send(JSON.stringify('Internal server error.'));
-            //         return;
-            //     }
+            let i;
+            let summaries = (await this._nativeMongoCollection.find({}).toArray()).map((summary: any) => {
+                if (summary.id === req.params.id) {
+                    i = summary;
 
-            //     if (summary === null) {
-            //         res.status(404).send(JSON.stringify('Summary not found.'));
-            //         return;
-            //     }
-            // })
+                    res.status(200).json(summary);
+                    return;
+                }
+            })
 
-            console.log(req.params.id)
-
-            let sum = await this._nativeMongoDb.collection('summaries').findOne({ id: req.params.id });
-
-            console.log(sum)
-
-            res.status(200).json(sum);
             return;
         })
 
