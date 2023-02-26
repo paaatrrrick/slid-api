@@ -12,7 +12,8 @@ import { Summary, User } from './models.js';
 import { MongoHandler } from "./mongo.js";
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-const pdf2text = require('pdf-to-text');
+import { MongoClient, Collection, Db } from 'mongodb';
+// const pdf2text = require('pdf-to-text');
 // const axios = require('axios');
 // const vimeo = require('vimeo-upload-client');
 
@@ -33,7 +34,27 @@ export class Api {
     private _mongo: MongoHandler;
     private _jwtPk: string | undefined;
 
+    private _nativeMongoClient: MongoClient;
+    private _nativeMongoDb: Db;
+    private _nativeMongoCollection: Collection;
+
     constructor(mongoUri: string | undefined, jwtPk: string | undefined) {
+        let mgClient = new MongoClient(<string>mongoUri);
+        let db = 'test';
+        let collection = 'summaries';
+
+        mgClient.connect();
+
+        let mgDb = mgClient.db(db);
+        let mgCollection = mgDb.collection(collection);
+
+        console.log(mgCollection);
+        console.log(mgDb);
+
+        this._nativeMongoClient = mgClient;
+        this._nativeMongoDb = mgDb;
+        this._nativeMongoCollection = mgCollection;
+
         this._mongo = new MongoHandler(mongoUri);
         this._jwtPk = jwtPk;
 
@@ -112,35 +133,41 @@ export class Api {
          * }
          * ```
          */
-        router.get('/api/v1/summary/:id', (req, res) => {
+        router.get('/api/v1/summary/:id', async (req, res) => {
             if (req.params.id === null) {
                 res.status(400).send(JSON.stringify('Bad request.'));
             }
 
-            let summary = this._mongo.summaries().findById(req.params.id, (err: any, summary: any) => {
-                if (err) {
-                    res.status(500).send(JSON.stringify('Internal server error.'));
-                    return;
-                }
+            // let summary = this._mongo.summaries().findById(req.params.id, (err: any, summary: any) => {
+            //     if (err) {
+            //         res.status(500).send(JSON.stringify('Internal server error.'));
+            //         return;
+            //     }
 
-                if (summary === null) {
-                    res.status(404).send(JSON.stringify('Summary not found.'));
-                    return;
-                }
-            })
+            //     if (summary === null) {
+            //         res.status(404).send(JSON.stringify('Summary not found.'));
+            //         return;
+            //     }
+            // })
 
-            res.status(200).json(summary);
+            console.log(req.params.id)
+
+            let sum = await this._nativeMongoDb.collection('summaries').findOne({ id: req.params.id });
+
+            console.log(sum)
+
+            res.status(200).json(sum);
+            return;
         })
 
-        router.get('/api/v1/summaries', (req: any, res: any) => {
-            let summaries = this._mongo.summaries().find({}, (err: any, summaries: any) => {
-                if (err) {
-                    res.status(500).send(JSON.stringify('Internal server error.'));
-                    return;
-                }
-            })
+        router.get('/api/v1/summaries', async (req: any, res: any) => {
+            let newA;
+            let summaries = await this._nativeMongoCollection.find({}).toArray()
+
+            console.log(summaries)
 
             res.status(200).json(summaries);
+            return;
         })
 
         return (router);
