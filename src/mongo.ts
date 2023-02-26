@@ -53,9 +53,9 @@ export class MongoHandler {
         })
 
         let summariesSchema = new Schema<Summary>({
-            rawContent: [],
-            summedContent: [],
-            type: String
+            title: String,
+            summaries: [],
+            id: String,
         })
 
         this._userModel = mongoose.model<User>('User', userSchema);

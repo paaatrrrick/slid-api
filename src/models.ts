@@ -2,17 +2,17 @@ export interface Summary {
     /**
      * The content to be summarized
      */
-    rawContent: string,
+    title: string,
 
     /**
      * The summarized content
      */
-    summedContent: string[],
+    summaries: any[],
 
     /**
-     * The type of the content (pdf, txt, mov, etc.)
+     * 
      */
-    type: string,
+    id: string
 }
 
 export interface User {
