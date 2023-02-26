@@ -120,62 +120,27 @@ export class Api {
             let summary = this._mongo.summaries().findById(req.params.id, (err: any, summary: any) => {
                 if (err) {
                     res.status(500).send(JSON.stringify('Internal server error.'));
+                    return;
                 }
 
                 if (summary === null) {
                     res.status(404).send(JSON.stringify('Summary not found.'));
+                    return;
                 }
-
-                res.status(200).send(JSON.stringify(summary));
             })
 
             res.status(200).json(summary);
         })
 
-        /**
-         * Route for creating a new user and logging in a user
-         * 
-         * POST body:
-         * ```json
-         * {
-         * }
-         * ```
-         */
-        router.post('/api/v1/users/login', (req, res) => {
-            if (req.body === null) {
-                res.status(400).send(JSON.stringify('Bad request.'));
-            } else {
-                let { idToken, email } = req.body;
-                const uid = this.randomStringToHash24Bits(<string>idToken);
-                console.log(uid);
-                let user = this._mongo.users().findById(uid, async (err: any, user: any) => {
-                    if (err) {
-                        res.status(500).send(JSON.stringify('Internal server error.'));
+        router.get('/api/v1/summaries', (req: any, res: any) => {
+            let summaries = this._mongo.summaries().find({}, (err: any, summaries: any) => {
+                if (err) {
+                    res.status(500).send(JSON.stringify('Internal server error.'));
+                    return;
+                }
+            })
 
-                        return;
-                    }
-                    if (!user) {
-                        const user = await this._mongo.users().create(
-                            <User>{
-                                _id: uid,
-                                username: email,
-                                summaries: []
-                            }, (err: any, user: any) => {
-                                if (err) {
-                                    console.log(err);
-                                    res.status(500).send(JSON.stringify('Internal server error.'));
-                                    return;
-                                }
-                            })
-
-                        let token = jwt.sign({ _id: uid, }, <string>this._jwtPk, { expiresIn: "1000d" });
-                        res.status(200).send({ token: token, message: 'Login successful' });
-                    } else {
-                        let token = jwt.sign({ _id: uid, }, <string>this._jwtPk, { expiresIn: "1000d" });
-                        res.status(200).send({ token: token, message: 'Login successful' });
-                    }
-                })
-            }
+            res.status(200).json(summaries);
         })
 
         return (router);
