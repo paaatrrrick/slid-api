@@ -65,7 +65,7 @@ export class MongoHandler {
         })
 
         let summariesSchema = new Schema<Summary>({
-            rawContent: [],
+            rawContent: String,
             summedContent: [],
             type: String
         })

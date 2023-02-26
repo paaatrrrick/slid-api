@@ -42,7 +42,17 @@ let upload = multer({ dest: 'uploads/' })
 //   transcribeLocalVideo('deepgram.mp4').then((transcript) =>
     // console.dir(transcript, { depth: null })
 //   )
+async function callingFlask(data:any): Promise<string> {
+    const flaskApi = 'www.flask.com'
+    const url = 'api/v1/machinelearning'
+    const response = await fetch(`${flaskApi}/${url}`, {
+        method: "POST",
+        body: data
+    })
+    const res = await response.json();
+    return res;
 
+}
 export class Api {
     private _mongo: MongoHandler;
 
@@ -75,13 +85,15 @@ export class Api {
          * }
          * ```
          */
-       
-
-        router.post('/api/v1/summary/new', upload.array('files'), (req: any, res: any) => {
+        router.post('/api/v1/summary/new', upload.array('files'), async (req: any, res: any) => {
             if (req.body == null) {
                 res.status(400).send(JSON.stringify('Bad request.'));
             }
-            let str:string ;
+
+            let resp: string;
+            let result: string;
+
+            
             for (let file of req.files) {
                 console.log(file);
                 switch (file.mimetype) {
@@ -91,7 +103,7 @@ export class Api {
                         fs.readFile(file.path, 'binary', function(err, data){
       
                             // Display the file content
-                            str = data;
+                            result = data;
                             console.log(data);
                         });
                         // console.log(os.tmpdir());
@@ -103,7 +115,7 @@ export class Api {
                             }
                             let summary = this._mongo.summaries()?.create(
                                 <Summary>{
-                                    rawContent: str,
+                                    rawContent: result,
                                     summedContent: [],
                                     type: "mov"
                                 }, (err: any, summary: any) => {
@@ -123,30 +135,30 @@ export class Api {
                         res.status(501).send(JSON.stringify('Not implemented.'));
                         break;
 
-                    case "mp4":
+                    case "video/mp4":
                         /** @todo make llm request */
-                        let sourceVideoFile = fs.open(file.path,'r',function(err, data){
-                        });
+                        // let sourceVideoFile = fs.open(file.path,'r',function(err, data){
+                        // });
 
-                        
+                        let video = fs.createReadStream( file.path);
                         
                         fs.readFile(file.path, 'binary', function(err, data){
       
                             // Display the file content
-                            str = data;
+                            result = data;
                             console.log(data);
                         });
-                        // console.log(os.tmpdir());
+                        console.log(os.tmpdir());
                         
-
+                        resp = await callingFlask(video);
                         this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
                             if (err) {
                                 res.status(500).send(JSON.stringify('Internal server error.'));
                             }
                             let summary = this._mongo.summaries()?.create(
                                 <Summary>{
-                                    rawContent: str,
-                                    summedContent: [],
+                                    rawContent: result,
+                                    summedContent: [resp],
                                     type: "mp4"
                                 }, (err: any, summary: any) => {
                                     if (err) {
@@ -160,18 +172,16 @@ export class Api {
                             )
                         })
 
-                        // res.status(200).send(JSON.stringify('Success.'));
+                        res.status(200).send(JSON.stringify('Success.'));
                         // break;
-                        res.status(501).send(JSON.stringify('Not implemented.'));
+                        // res.status(501).send(JSON.stringify('Not implemented.'));
                         break;
 
                     case "application/pdf":
-
-
                         // console.log("get pdf")
                         // make tmp directory
-                        // const pdfParser = new PDFParser(this,1);
-                        // // console.log(os.tmpdir+file.originalname);
+                        const pdfParser = new PDFParser(this,1);
+                        // console.log(os.tmpdir+file.originalname);
                         // fs.writeFile(os.tmpdir()+file.originalname, file, (err) => {
                         //     if (err)
                         //       console.log(err);
@@ -183,12 +193,12 @@ export class Api {
                         //   });
                         // fs.writeFile(os.tmpdir()+file.originalname, file);
                         // console.log(upload+file.filename);
-                        // pdfParser.loadPDF(file.path);
+                        pdfParser.loadPDF(file.path);
                         
-                        // pdfParser.on("pdfParser_dataError", (errData:any) => console.error(errData.parserError)); pdfParser.on("pdfParser_dataReady", (pdfData:any) => {
-                        //      let data = pdfParser.getRawTextContent().replace(/-/g,"");
+                        pdfParser.on("pdfParser_dataError", (errData:any) => console.error(errData.parserError)); 
+                             let data = pdfParser.getRawTextContent().replace(/-/g,"");
                              
-                        //      console.log("TEST:"+data);
+                             console.log("TEST:"+data);
                         //  });
                         // parse "local" pdf
                         // make llm request
@@ -196,11 +206,11 @@ export class Api {
                         fs.readFile(file.path, 'binary', function(err, data){
       
                             // Display the file content
-                            str = data;
+                            result = data;
                             console.log(data);
                         });
                         // console.log(os.tmpdir());
-                        
+                         resp = await callingFlask(data);
 
                         this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
                             if (err) {
@@ -208,7 +218,7 @@ export class Api {
                             }
                             let summary = this._mongo.summaries()?.create(
                                 <Summary>{
-                                    rawContent: str,
+                                    rawContent: result,
                                     summedContent: [],
                                     type: "pdf"
                                 }, (err: any, summary: any) => {
@@ -225,105 +235,32 @@ export class Api {
 
                         // res.status(200).send(JSON.stringify('Success.'));
                         // break;
-                        res.status(501).send(JSON.stringify('Not implemented.'));
+                        res.status(200).send(JSON.stringify('Success.'));
+                        // break;
+                        // res.status(501).send(JSON.stringify('Not implemented.'));
                         break;
 
-                    // case "image/jpeg":
-                    //     fs.readFile(file.path, 'binary', function(err, data){
-      
-                    //         // Display the file content
-                    //         str = data;
-                    //         console.log(data);
-                    //     });
-                    //     // console.log(os.tmpdir());
-                        
-
-                    //     this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                    //         if (err) {
-                    //             res.status(500).send(JSON.stringify('Internal server error.'));
-                    //         }
-                    //         let summary = this._mongo.summaries()?.create(
-                    //             <Summary>{
-                    //                 rawContent: str,
-                    //                 summedContent: [],
-                    //                 type: "jpg"
-                    //             }, (err: any, summary: any) => {
-                    //                 if (err) {
-                    //                     res.status(500).send(JSON.stringify('Internal server error.'));
-                    //                 }
-
-                    //                 user.summaries.push(summary._id)
-
-                    //                 user.save()
-                    //             }
-                    //         )
-                    //     })
-
-                    //     // res.status(200).send(JSON.stringify('Success.'));
-                    //     // break;
-                    //     res.status(501).send(JSON.stringify('Not implemented.'));
-                    //     break;
-                        
-
-                    // case "image/png":
-                    //     // make llm request
-                    //     // save to db
-                        
-                    //     console.log("get png")
-                        
-                    //     fs.readFile(file.path, 'binary', function(err, data){
-      
-                    //         // Display the file content
-                    //         str = data;
-                    //         console.log(data);
-                    //     });
-                    //     // console.log(os.tmpdir());
-                        
-
-                    //     this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
-                    //         if (err) {
-                    //             res.status(500).send(JSON.stringify('Internal server error.'));
-                    //         }
-                    //         let summary = this._mongo.summaries()?.create(
-                    //             <Summary>{
-                    //                 rawContent: str,
-                    //                 summedContent: [],
-                    //                 type: "png"
-                    //             }, (err: any, summary: any) => {
-                    //                 if (err) {
-                    //                     res.status(500).send(JSON.stringify('Internal server error.'));
-                    //                 }
-
-                    //                 user.summaries.push(summary._id)
-
-                    //                 user.save()
-                    //             }
-                    //         )
-                    //     })
-
-                    //     // res.status(200).send(JSON.stringify('Success.'));
-                    //     // break;
-                    //     res.status(501).send(JSON.stringify('Not implemented.'));
-                    //     break;
-
+                    
+                    
                     case "text/plain":
-                        
-                        fs.readFile(file.path, 'binary', function(err, data){
+                        fs.readFile(file.path, 'utf-8', function(err, data)
+                        {
       
                             // Display the file content
-                            str = data;
+                            result = data;
                             console.log(data);
                         });
                         // console.log(os.tmpdir());
                         
-
+                         resp = await callingFlask(data);
+                        
                         this._mongo.users().findById(req.body.userId, (err: any, user: any) => {
                             if (err) {
                                 res.status(500).send(JSON.stringify('Internal server error.'));
                             }
                             let summary = this._mongo.summaries()?.create(
                                 <Summary>{
-                                    rawContent: str,
+                                    rawContent: result,
                                     summedContent: [],
                                     type: "plaintext"
                                 }, (err: any, summary: any) => {
